@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib.collections import LineCollection
 from matplotlib.patches import FancyArrowPatch
+from scipy.spatial import KDTree
 
 mpl.use('TkAgg') #Usa questo backend per la visualizzazione
 ff1.Cache.enable_cache('cache') # Abilita la cache per velocizzare il caricamento dei dati
@@ -77,6 +78,7 @@ mask_accel_start = (throttle > 5) & (throttle.shift(1) <= 5) # mask_accel_start 
 # in mask_accel_start c'è True per i punti in cui l'acceleratore supera il 5% dopo essere stato più basso
 
 accel_pts = sector_telemetry.loc[mask_accel_start, ['X', 'Y']] # accel_pts contiene le coordinate X e Y dei punti di accelerazione
+
 
 fig, ax = plt.subplots(figsize=(6, 6)) # Crea una figura e un asse per il tracciato
 fig.suptitle(f"{driver} - {weekend.EventName} - {session.event.year} - {ses} - Turn {sector.loc[0,'Number']}", fontsize=14, fontweight='bold')
@@ -161,5 +163,42 @@ arrow = FancyArrowPatch(
     arrowstyle='-|>', mutation_scale=30, color='black', linewidth=2.5, zorder=4
 )
 ax.add_patch(arrow)
+
+# Trovo le curve per disegnarne dopo i numeri
+# Per disegnarli all'esterno della pista devo trovare le curve a quale punto della telemetria sono più vicine
+# Una volta trovato, posso calcolare la direzione della curva e spostare il testo di un offset laterale
+curves = corners.loc[idx_first:idx_last]  # campi x, y, Number, Angle, Distance
+
+# Crea un albero KD per ricerca veloce nei punti telemetria
+telemetry_points = np.column_stack((tel['X'], tel['Y']))
+tree = KDTree(telemetry_points)
+
+# Trova gli indici dei punti più vicini alle curve
+curve_coords = np.column_stack((curves['X'], curves['Y']))
+_, indices = tree.query(curve_coords) # indices ora contiene per ogni curva l’indice del punto telemetria più vicino
+
+# Calcola direzione per ogni curva
+dx = tel['X'].iloc[indices + 1].values - tel['X'].iloc[indices - 1].values
+dy = tel['Y'].iloc[indices + 1].values - tel['Y'].iloc[indices - 1].values
+
+lengths = np.hypot(dx, dy)
+nx = -dy / lengths
+ny = dx / lengths
+
+offset = 200  # unità laterale (es. metri)
+curves['X_offset'] = curves['X'] + nx * offset
+curves['Y_offset'] = curves['Y'] + ny * offset
+
+print(curves)
+
+for _, row in curves.iterrows():
+    ax.text(
+        row['X_offset'], row['Y_offset'],
+        f"{row['Number']}", fontsize=10, fontweight='bold',
+        color='black', ha='center', va='center',
+        bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', boxstyle='round,pad=0.3')
+    )
+
+
 
 plt.show()
