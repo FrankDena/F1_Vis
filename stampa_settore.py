@@ -189,7 +189,6 @@ offset = 200  # unità laterale (es. metri)
 curves['X_offset'] = curves['X'] + nx * offset
 curves['Y_offset'] = curves['Y'] + ny * offset
 
-print(curves)
 
 for _, row in curves.iterrows():
     ax.text(
