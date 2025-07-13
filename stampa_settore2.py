@@ -138,7 +138,7 @@ def plot_on_axis(ax, lap_obj):
         ax.text(r['X_off'], r['Y_off'], str(int(r['Number'])),
                 fontsize=8, fontweight='bold',
                 ha='center', va='center',
-                bbox=dict(facecolor='white', alpha=0.7,
+                bbox=dict(facecolor='none', alpha=0.7,
                           edgecolor='none', boxstyle='round,pad=0.2'))
 
     # Per il lap time, estraiamo il tempo del giro e lo formattiamo usando regex

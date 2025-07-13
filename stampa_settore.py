@@ -195,7 +195,7 @@ for _, row in curves.iterrows():
         row['X_offset'], row['Y_offset'],
         f"{row['Number']}", fontsize=10, fontweight='bold',
         color='black', ha='center', va='center',
-        bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', boxstyle='round,pad=0.3')
+        bbox=dict(facecolor='none', alpha=0.7, edgecolor='none', boxstyle='round,pad=0.3')
     )
 
 
