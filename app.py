@@ -10,12 +10,27 @@ from scipy.spatial import KDTree
 
 ff1.Cache.enable_cache('cache') # Abilita la cache per velocizzare il caricamento dei dati
 
+def load_weekends_for_year(year):
+    # Restituisce la lista degli eventi per un anno specifico
+    # da mostrare nella sidebar
+    schedule = ff1.get_event_schedule(year)
+    return schedule['EventName'].tolist()
+
+
+def load_drivers_for_session(year, wknd, ses):
+    # Restituisce la lista dei piloti per una sessione specifica
+    session = ff1.get_session(year, wknd, ses)
+    session.load()
+    driver_numbers = session.drivers
+    drivers = [session.get_driver(driver)["Abbreviation"] for driver in driver_numbers]
+    return drivers
+
 # --- Sidebar per controlli ---
 st.sidebar.title("F1 Telemetry Viewer")
 year = st.sidebar.selectbox("Anno", [2022, 2023, 2024], index=2)
-wknd = st.sidebar.number_input("Weekend (round)", min_value=1, max_value=25, value=5)
+wknd = st.sidebar.selectbox("Weekend", load_weekends_for_year(year), index=0)
 ses = st.sidebar.selectbox("Sessione", ['FP1', 'FP2', 'FP3', 'Q', 'R'], index=4)
-driver = st.sidebar.selectbox("Pilota", ['HAM', 'VER', 'LEC', 'NOR', 'RUS', 'SAI', 'ALO'])
+driver = st.sidebar.selectbox("Pilota", load_drivers_for_session(year, wknd, ses))
 
 if st.sidebar.button("Carica dati e mostra plot"):
 
@@ -138,13 +153,13 @@ if st.sidebar.button("Carica dati e mostra plot"):
 
     ax.axis('equal') # Imposta gli assi con la stessa scala per X e Y
     ax.axis('off') # Nasconde gli assi per un aspetto più pulito
-    ax.legend(loc='upper right', frameon=False, fontsize=12) # Aggiunge la legenda in alto a destra
+    ax.legend(loc='best', frameon=False, fontsize=12) # Aggiunge la legenda in alto a destra
 
 
     # Disegna la freccia
 
-    dx = x.iloc[3] - x.iloc[1]
-    dy = y.iloc[3] - y.iloc[1]
+    dx = x.iloc[6] - x.iloc[3]
+    dy = y.iloc[6] - y.iloc[3]
 
     # Normalizza
     length = np.hypot(dx, dy)
@@ -156,13 +171,13 @@ if st.sidebar.button("Carica dati e mostra plot"):
     x_offset = nx * offset
     y_offset = ny * offset
 
-    start = (x.iloc[1] + x_offset, y.iloc[1] + y_offset)
-    end = (x.iloc[3] + x_offset, y.iloc[3] + y_offset)
+    start = (x.iloc[3] + x_offset, y.iloc[3] + y_offset)
+    end = (x.iloc[6] + x_offset, y.iloc[6] + y_offset)
 
 
     arrow = FancyArrowPatch(
         posA=start, posB=end,
-        arrowstyle='-|>', mutation_scale=30, color='black', linewidth=2.5, zorder=4
+        arrowstyle="-|>", mutation_scale=30, color='black', linewidth=2, zorder=4
     )
     ax.add_patch(arrow)
 
@@ -187,7 +202,8 @@ if st.sidebar.button("Carica dati e mostra plot"):
     nx = -dy / lengths
     ny = dx / lengths
 
-    offset = 180  # unità laterale (es. metri)
+    offset = 260
+
     curves['X_offset'] = curves['X'] + nx * offset
     curves['Y_offset'] = curves['Y'] + ny * offset
 
