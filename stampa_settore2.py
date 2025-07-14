@@ -16,7 +16,7 @@ import math
 ff1.Cache.enable_cache('cache')
 
 # Definisci i parametri dell'analisi
-year, wknd, ses, driver = 2024, 5, 'R', 'HAM'
+year, wknd, ses, driver = 2024, 5, 'Q', 'BOT'
 session = ff1.get_session(year, wknd, ses)
 session.load()
 weekend = session.event
@@ -75,7 +75,7 @@ def plot_on_axis(ax, obj):
     cb = plt.colorbar(lc, ax=ax,
                       orientation='horizontal',
                       fraction=0.04, pad=0.05)
-    cb.set_label('Acceleratore (%)', fontsize=8)
+    cb.set_label('Throttle (%)', fontsize=8)
 
     # Estraiamo i punti di frenata e accelerazione per il settore
     brake = tel.loc[mask&(tel['Brake'].astype(int).diff()==1), ['X','Y']] # Punti di frenata, selezionati dalla telemetria del settore e filtrati per il cambiamento del valore del freno e della maschera
@@ -84,13 +84,13 @@ def plot_on_axis(ax, obj):
     accel = pd.DataFrame({'X':x,'Y':y})[accel_mask] # Estrai i punti di accelerazione dalla telemetria del settore, costruendo un DataFrame con le coordinate X e Y
     # Disegna i punti di frenata e accelerazione sullo stesso asse del grafico
     ax.scatter(brake['X'], brake['Y'],
-               marker='v', c='white', s=60,
+               marker='v', c='white', s=80,
                edgecolors='black', linewidths=1, zorder=3,
-               label='Frenata')
+               label='Brake Point')
     ax.scatter(accel['X'], accel['Y'],
-               marker='o', c='white', s=60,
+               marker='o', c='white', s=80,
                edgecolors='black', linewidths=1, zorder=3,
-               label='Accel.')
+               label='Acceleration Point')
 
     # Stile assi e legenda
     ax.axis('equal'); ax.axis('off')
@@ -156,18 +156,21 @@ def plot_on_axis(ax, obj):
     if match:
         lap_time = match.group(2)
     # Descrizione di ogni grafico
-    ax.set_title(f"{driver} - {weekend.EventName} - {session.event.year} - {ses} - Turn {sector.loc[0,'Number']}\n Compound: {obj['fastest_lap']['Compound']} - LAP: {int(obj['fastest_lap']['LapNumber'])}\n LAP time: {lap_time}\n Stint Length on this compound: {obj['stint_length']} laps",
-                 fontsize=9)
+    ax.set_title(f"{driver} - {weekend.EventName} - {session.event.year} - {ses} - Turn {sector.loc[0,'Number']}\n Compound: {obj['fastest_lap']['Compound']} - LAP: {obj['fastest_lap']['LapNumber'].astype(int)}\n LAP Time: {lap_time}\n Total Laps on this Compound: {obj['stint_length']} Laps",
+                 fontsize=8, fontweight='bold')
 
 # Costruisci il grafico per ogni giro del dizionario fastest_per_compound, come un subplot
 n = len(fastest_per_compound)
-cols = min(n, 2)
-rows = math.ceil(n/cols)
+cols = n
+rows = 1
 fig, axes = plt.subplots(rows, cols,
                          figsize=(6*cols, 5*rows),
                          tight_layout=True)
 
-axes = axes.flatten()
+if cols == 1:
+    axes = [axes]  # Assicurati che axes sia sempre una lista
+else:
+    axes = axes.flatten()
 for ax, obj in zip(axes, fastest_per_compound.values()):
     plot_on_axis(ax, obj)
 
