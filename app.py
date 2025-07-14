@@ -220,3 +220,4 @@ if st.sidebar.button("Carica dati e mostra plot"):
 
     #plt.show()
     st.pyplot(fig)
+
