@@ -25,8 +25,10 @@ weekend = session.event
 driver_laps = session.laps.pick_drivers(driver)
 fastest_per_compound = {}
 for comp, grp in driver_laps.groupby('Compound'): # Utilizza il metodo groupby per raggruppare i giri per compound
+    stint_per_compund = len(grp) # Estrai i giri per stint
     fastest_lap = grp.pick_fastest() # Estrai il giro più veloce per ogni compound
-    fastest_per_compound[comp] = fastest_lap # Salva il giro più veloce in un dizionario, per lo specifico compound
+    fastest_per_compound[comp] = { 'fastest_lap': fastest_lap,
+                                  'stint_length': stint_per_compund } # Salva il giro più veloce in un dizionario, per lo specifico compound
 
 # Estrai le curve del circuito e definisci il settore
 # (curve 1-4 in questo caso)
@@ -49,8 +51,9 @@ d_start, d_end = (d_prev+d0)/2, (d_end0+d_next)/2 # Calcola le distanze di inizi
 # Questa funzione disegna i grafici per ogni giro considerato prima
 # e li visualizza in Streamlit
 # La funzione cicla su ogni giro del dizionario fastest_per_compound
-def plot_on_axis(ax, lap_obj):
-    tel = lap_obj.get_telemetry() # Estrai la telemetria del giro
+def plot_on_axis(ax, obj):
+    lap = obj['fastest_lap'] # Estrai il giro più veloce dal dizionario
+    tel = lap.get_telemetry() # Estrai la telemetria del giro
     # Filtra la telemetria del settore tra d_start e d_end
     mask = (tel['Distance']>=d_start)&(tel['Distance']<=d_end) # Maschera boolean per filtrare la telemetria del settore
     x, y = tel.loc[mask,'X'], tel.loc[mask,'Y'] # x e y contengono le coordinate X e Y della posizione nel settore specificato del tracciato ed ottenuto dalla maschera
@@ -59,6 +62,12 @@ def plot_on_axis(ax, lap_obj):
     pts = np.array([x,y]).T.reshape(-1,1,2)
     segs = np.concatenate([pts[:-1], pts[1:]], axis=1)
     ax.plot(x,y, color='black', linewidth=10, alpha=0.8, zorder=1)
+    # Recupera la linea appena creata
+    linea_tracciato = ax.lines[-1]
+    # Imposta cap e join arrotondati
+    linea_tracciato.set_solid_capstyle('round')   # estremità arrotondate
+    linea_tracciato.set_solid_joinstyle('round')  # giunzioni arrotondate
+
     norm = mpl.colors.Normalize(thr.min(), thr.max())
     lc = LineCollection(segs, cmap='RdYlGn', norm=norm, linewidth=6)
     lc.set_array(thr); lc.set_capstyle('round')
@@ -142,12 +151,12 @@ def plot_on_axis(ax, lap_obj):
                           edgecolor='none', boxstyle='round,pad=0.2'))
 
     # Per il lap time, estraiamo il tempo del giro e lo formattiamo usando regex
-    lap_time = str(lap_obj['LapTime'])
+    lap_time = str(obj['fastest_lap']['LapTime'])
     match = re.search(r'(\d+:(\d+:\d+\.\d+))', lap_time)
     if match:
         lap_time = match.group(2)
     # Descrizione di ogni grafico
-    ax.set_title(f"{driver} - {weekend.EventName} - {session.event.year} - {ses} - Turn {sector.loc[0,'Number']}\n Compound: {lap_obj['Compound']} - LAP: {int(lap_obj['LapNumber'])}\n LAP time:{lap_time}",
+    ax.set_title(f"{driver} - {weekend.EventName} - {session.event.year} - {ses} - Turn {sector.loc[0,'Number']}\n Compound: {obj['fastest_lap']['Compound']} - LAP: {int(obj['fastest_lap']['LapNumber'])}\n LAP time: {lap_time}\n Stint Length on this compound: {obj['stint_length']} laps",
                  fontsize=9)
 
 # Costruisci il grafico per ogni giro del dizionario fastest_per_compound, come un subplot
@@ -159,8 +168,8 @@ fig, axes = plt.subplots(rows, cols,
                          tight_layout=True)
 
 axes = axes.flatten()
-for ax, lap_obj in zip(axes, fastest_per_compound.values()):
-    plot_on_axis(ax, lap_obj)
+for ax, obj in zip(axes, fastest_per_compound.values()):
+    plot_on_axis(ax, obj)
 
 # nascondi eventuali subplot vuoti
 for ax in axes[n:]:
