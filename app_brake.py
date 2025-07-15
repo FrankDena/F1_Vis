@@ -28,12 +28,12 @@ def load_drivers_for_session(year, wknd, ses):
 
 # --- Sidebar per controlli ---
 st.sidebar.title("F1 Telemetry Viewer")
-year = st.sidebar.selectbox("Anno", [2022, 2023, 2024], index=2)
+year = st.sidebar.selectbox("Year", [2022, 2023, 2024], index=2)
 wknd = st.sidebar.selectbox("Weekend", load_weekends_for_year(year), index=0)
-ses = st.sidebar.selectbox("Sessione", ['FP1', 'FP2', 'FP3', 'Q', 'R'], index=4)
-driver = st.sidebar.selectbox("Pilota", load_drivers_for_session(year, wknd, ses))
+ses = st.sidebar.selectbox("Session", ['FP1', 'FP2', 'FP3', 'Q', 'R'], index=4)
+driver = st.sidebar.selectbox("Driver", load_drivers_for_session(year, wknd, ses))
 
-if st.sidebar.button("Carica dati e mostra plot"):
+if st.sidebar.button("Load data and show plot"):
 
     session = ff1.get_session(year, wknd, ses)
     session.load()
@@ -143,7 +143,8 @@ if st.sidebar.button("Carica dati e mostra plot"):
     legend = fig.colorbar(
         lc, ax=ax, orientation='horizontal', fraction=0.03, pad=0.02
     )
-    legend.set_label('Acceleratore (%)', fontsize=10)
+    legend.set_label('Throttle (%)', fontsize=10)
+
 
     # Crea una lista di LineCollection, una per ogni segmento di frenata
     brake_collections = []
@@ -157,7 +158,7 @@ if st.sidebar.button("Carica dati e mostra plot"):
         segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
         # Crea LineCollection per questo segmento
-        brake_lc = LineCollection(segments, colors='cyan', linewidths=3)
+        brake_lc = LineCollection(segments, colors="white", linewidths=3)
         brake_lc.set_capstyle('round')  # Imposta estremità arrotondate
         brake_lc.set_linestyle('-')  # Imposta lo stile della linea
         brake_collections.append(brake_lc)
@@ -204,7 +205,7 @@ if st.sidebar.button("Carica dati e mostra plot"):
         ax.text(brake_coor_x, brake_coor_y, str(i), color='black', fontsize=8,
                 ha='center', va='center', zorder=4, alpha=0.7)
         ax.scatter(brake_coor_x, brake_coor_y, marker='o', c='white', s=160, 
-                   label='Frenata '+str(i)+": " + extract_text_from_speed_delta(speed_deltas_for_each_brake_zone[i-1]), edgecolors='black', linewidths=1.5, zorder=3, alpha=0.65)
+                   label='Brake Zone '+str(i)+": " + extract_text_from_speed_delta(speed_deltas_for_each_brake_zone[i-1]), edgecolors='black', linewidths=1.5, zorder=3, alpha=0.65)
 
     # ax.scatter(brake_pts['X'], brake_pts['Y'],
     #            marker='v', c='white', alpha=0.4, s=120, zorder=2)
