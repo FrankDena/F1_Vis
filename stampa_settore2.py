@@ -16,7 +16,7 @@ import math
 ff1.Cache.enable_cache('cache')
 
 # Definisci i parametri dell'analisi
-year, wknd, ses, driver = 2024, 5, 'Q', 'BOT'
+year, wknd, ses, driver = 2024, 8, 'R', 'HAM'
 session = ff1.get_session(year, wknd, ses)
 session.load()
 weekend = session.event
@@ -56,6 +56,44 @@ def plot_on_axis(ax, obj):
     tel = lap.get_telemetry() # Estrai la telemetria del giro
     # Filtra la telemetria del settore tra d_start e d_end
     mask = (tel['Distance']>=d_start)&(tel['Distance']<=d_end) # Maschera boolean per filtrare la telemetria del settore
+    
+    sec_tel = tel[mask] # Telemetria del settore filtrata
+    brk = sec_tel['Brake']
+    groups = (brk != brk.shift()).cumsum() # Raggruppa i punti di frenata, creando un gruppo per ogni cambiamento del valore del freno
+    brake_groups = sec_tel[brk == 1].groupby(groups) # Raggruppa i punti di frenata per i gruppi creati
+    brake_pts = sec_tel.loc[sec_tel['Brake'].astype(int).diff() == 1, ['X','Y']] # Estrai il primo punto di ogni gruppo di frenata
+    brake_collections = []
+    for _, group in brake_groups: # Cicla su ogni gruppo di frenata
+        xg = group['X'].values
+        yg = group['Y'].values
+
+        points = np.array([xg, yg]).T.reshape(-1, 1, 2) # Crea un array di punti per il gruppo di frenata
+        segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+        brake_lc = LineCollection(segments, color='white', linewidths = 3)
+        brake_lc.set_capstyle('round')  # Imposta le estremità arrotondate
+        brake_lc.set_linestyle('-')
+        brake_collections.append(brake_lc) # Aggiungi la collezione di linee di frenata alla lista
+
+    centered_brake_points = []
+    speed_deltas_for_each_brake_zone = []
+
+    for _, group in brake_groups: # Cicla su ogni gruppo di frenata
+        center_idx = len(group) // 3
+        x_center = group['X'].iloc[center_idx]
+        y_center = group['Y'].iloc[center_idx]
+        centered_brake_points.append((x_center, y_center)) # Aggiungi il punto di frenata centrato alla lista
+        speeds = group['Speed'].values
+        if len(speeds) > 1:
+            speed_delta = int(speeds[0]) - int(speeds[-1]) # Calcola la differenza di velocità tra il primo e l'ultimo punto del gruppo di frenata
+            speed_deltas_for_each_brake_zone.append((speeds[0].astype(int), speeds[-1].astype(int), speed_delta))
+        else:
+            speed_deltas_for_each_brake_zone.append((speeds[0].astype(int),speeds[0].astype(int),0))
+
+    def extract_text_from_speed_delta(speed_delta_tuple):
+        # Estrae il testo dalla tupla di velocità
+        return f"{speed_delta_tuple[0]} Km/h - {speed_delta_tuple[1]} Km/h ({speed_delta_tuple[2]} km/h)"
+     
     x, y = tel.loc[mask,'X'], tel.loc[mask,'Y'] # x e y contengono le coordinate X e Y della posizione nel settore specificato del tracciato ed ottenuto dalla maschera
     thr = tel.loc[mask,'Throttle'] # thr contiene i valori dell'acceleratore nel settore specificato
     # segmenti colorati
@@ -83,18 +121,28 @@ def plot_on_axis(ax, obj):
     accel_mask = (thr>5)&(thr.shift(1)<=5)
     accel = pd.DataFrame({'X':x,'Y':y})[accel_mask] # Estrai i punti di accelerazione dalla telemetria del settore, costruendo un DataFrame con le coordinate X e Y
     # Disegna i punti di frenata e accelerazione sullo stesso asse del grafico
-    ax.scatter(brake['X'], brake['Y'],
-               marker='v', c='white', s=80,
-               edgecolors='black', linewidths=1, zorder=3,
-               label='Brake Point')
-    ax.scatter(accel['X'], accel['Y'],
-               marker='o', c='white', s=80,
-               edgecolors='black', linewidths=1, zorder=3,
-               label='Acceleration Point')
+    # ax.scatter(brake['X'], brake['Y'],
+    #            marker='v', c='white', s=80,
+    #            edgecolors='black', linewidths=1, zorder=3,
+    #            label='Brake Point')
+    
+    for brake_lc in brake_collections: # Aggiungi le collezioni di linee di frenata all'asse
+        ax.add_collection(brake_lc)
+    
+    # Aggiungi numeri dentro i marker
+    for i, (brake_coor_x, brake_coor_y) in enumerate(centered_brake_points, start=1):
+        ax.text(brake_coor_x, brake_coor_y, str(i), color='black', fontsize=8, fontweight='bold', 
+                ha='center', va='center', zorder=4, alpha=0.7)
+        ax.scatter(brake_coor_x, brake_coor_y, marker='o', c='white', s=160, 
+                   label='Brake Zone '+str(i)+": " + extract_text_from_speed_delta(speed_deltas_for_each_brake_zone[i-1]), edgecolors='black', linewidths=1.5, zorder=3, alpha=0.65)
+    # ax.scatter(accel['X'], accel['Y'],
+    #            marker='o', c='white', s=80,
+    #            edgecolors='black', linewidths=1, zorder=3,
+    #            label='Acceleration Point')
 
     # Stile assi e legenda
     ax.axis('equal'); ax.axis('off')
-    ax.legend(loc='upper right', frameon=False, fontsize=8)
+    ax.legend(loc='best', frameon=False, fontsize=8, markerscale=0.7)
 
     # Aggiungi una freccia per indicare la direzione del tracciato
     # La freccia è disegnata tra due punti scelti del tracciato
@@ -141,17 +189,17 @@ def plot_on_axis(ax, obj):
     dys = tel['Y'].iloc[idxs+1].values - tel['Y'].iloc[idxs-1].values
     Ls = np.hypot(dxs,dys)
     nxx, nyy = -dys/Ls, dxs/Ls
-    sub['X_off'] = sub['X'] + nxx*200
-    sub['Y_off'] = sub['Y'] + nyy*200
+    sub['X_off'] = sub['X'] + nxx*260
+    sub['Y_off'] = sub['Y'] + nyy*260
     for _, r in sub.iterrows():
         ax.text(r['X_off'], r['Y_off'], str(int(r['Number'])),
-                fontsize=8, fontweight='bold',
-                ha='center', va='center',
-                bbox=dict(facecolor='none', alpha=0.7,
+                fontsize=10, fontweight='bold',
+                ha='center', va='center', color='black',
+                bbox=dict(facecolor='none', alpha=0.5,
                           edgecolor='none', boxstyle='round,pad=0.2'))
 
     # Per il lap time, estraiamo il tempo del giro e lo formattiamo usando regex
-    lap_time = str(obj['fastest_lap']['LapTime'])
+    lap_time = str(obj['fastest_lap']['LapTime'])[:-3]
     match = re.search(r'(\d+:(\d+:\d+\.\d+))', lap_time)
     if match:
         lap_time = match.group(2)
