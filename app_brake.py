@@ -7,6 +7,7 @@ import matplotlib as mpl
 from matplotlib.collections import LineCollection
 from matplotlib.patches import FancyArrowPatch
 from scipy.spatial import KDTree
+import re
 
 ff1.Cache.enable_cache('cache') # Abilita la cache per velocizzare il caricamento dei dati
 
@@ -84,6 +85,11 @@ if st.sidebar.button("Carica dati e mostra plot"):
     segments = np.concatenate([points[:-1], points[1:]], axis=1)
     #concatenate unisce i punti in segmenti, creando un array di segmenti 2D, dove ogni segmento è rappresentato da due punti consecutivi.
 
+    brake = sector_telemetry['Brake']
+    # Trova gruppi contigui dove Brake == 1
+    groups = (brake != brake.shift()).cumsum() #ogni blocco contiguo di valori uguali in Brake ottiene un ID di gruppo unico
+    brake_groups = sector_telemetry[brake == 1].groupby(groups) #Ogni gruppo corrisponde a una sequenza contigua di Brake == 1
+
     # Trova i punti di frenata
     brake_pts = sector_telemetry.loc[sector_telemetry['Brake'].astype(int).diff() == 1, ['X', 'Y']] 
     # Estrai i punti in cui il freno è stato attivato, differenza tra valori consecutivi di 'Brake' per trovare i cambiamenti
@@ -98,11 +104,18 @@ if st.sidebar.button("Carica dati e mostra plot"):
 
 
     fig, ax = plt.subplots(figsize=(6, 6)) # Crea una figura e un asse per il tracciato
-    fig.suptitle(f"{driver} - {weekend.EventName} - {session.event.year} - {ses} - Turn {sector.loc[0,'Number']}", fontsize=14, fontweight='bold')
+
+    # Per il lap time, estraiamo il tempo del giro e lo formattiamo usando regex
+    lap_time = str(lap['LapTime'])[:-3]
+    match = re.search(r'(\d+:(\d+:\d+\.\d+))', lap_time)
+    if match:
+        lap_time = match.group(2)
+    fig.suptitle(f"{driver} - {weekend.EventName} - {session.event.year} - {ses} - Turn {sector.loc[0,'Number']}\n Compound: {lap['Compound']} - LAP: {lap['LapNumber'].astype(int)}\n LAP Time: {lap_time}", fontsize=12, fontweight='bold')
+
     # suptitle imposta il titolo della figura con il nome del pilota, l'evento, l'anno e la sessione e il numero del primo settore
 
     #Disegno del tracciato nero sullo sfondo
-    ax.plot(x,y,color='black', linewidth=10, alpha=0.8, zorder=1, label='Tracciato') # Disegna il tracciato in nero
+    ax.plot(x,y,color='black', linewidth=10, alpha=0.8, zorder=1) # Disegna il tracciato in nero
 
     # Recupera la linea appena creata
     linea_tracciato = ax.lines[-1]
@@ -132,10 +145,66 @@ if st.sidebar.button("Carica dati e mostra plot"):
     )
     legend.set_label('Acceleratore (%)', fontsize=10)
 
+    # Crea una lista di LineCollection, una per ogni segmento di frenata
+    brake_collections = []
+    for _, group in brake_groups:
+        # Prendi coordinate X, Y per questo gruppo
+        xg = group['X'].values
+        yg = group['Y'].values
+
+        # Crea punti e segmenti
+        points = np.array([xg, yg]).T.reshape(-1, 1, 2)
+        segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+        # Crea LineCollection per questo segmento
+        brake_lc = LineCollection(segments, colors='cyan', linewidths=3)
+        brake_lc.set_capstyle('round')  # Imposta estremità arrotondate
+        brake_lc.set_linestyle('-')  # Imposta lo stile della linea
+        brake_collections.append(brake_lc)
+
+    # Aggiungi ogni segmento di frenata
+    for brake_lc in brake_collections:
+        ax.add_collection(brake_lc)
 
     # Punti di frenata con alone bianco (triangolo verso il basso)
-    ax.scatter(brake_pts['X'], brake_pts['Y'],
-            marker='v', c='white', s=120, label='Frenata', edgecolors='black', linewidths=1.5, zorder=3)
+    # ax.scatter(brake_pts['X'], brake_pts['Y'],
+    #         marker='o', c='white', s=160, label='Frenata', edgecolors='black', linewidths=1.5, zorder=3, alpha=0.65)
+    
+    centered_brake_points = []
+    speed_deltas_for_each_brake_zone = []
+
+    for _, group in brake_groups:
+        # Trova indice centrale del gruppo
+        center_idx = len(group) // 3
+
+        # Estrai X, Y del punto centrale
+        x_center = group.iloc[center_idx]['X']
+        y_center = group.iloc[center_idx]['Y']
+
+        # Salva la coppia (X, Y)
+        centered_brake_points.append((x_center, y_center))
+
+    
+        # Prendi le velocità del gruppo
+        speeds = group['Speed'].values
+
+        # Calcola la differenza di velocità tra il primo e l'ultimo punto del gruppo
+        if len(speeds) > 1:
+            speed_delta = int(speeds[0]) - int(speeds[-1])
+            speed_deltas_for_each_brake_zone.append((speeds[0].astype(int), speeds[-1].astype(int), speed_delta))
+        else:
+            speed_deltas_for_each_brake_zone.append((speeds[0].astype(int),speeds[0].astype(int),0))
+ 
+    def extract_text_from_speed_delta(speed_delta_tuple):
+        # Estrae il testo dalla tupla di velocità
+        return f"{speed_delta_tuple[0]} Km/h - {speed_delta_tuple[1]} Km/h ({speed_delta_tuple[2]} km/h)"
+
+    # Aggiungi numeri dentro i marker
+    for i, (brake_coor_x, brake_coor_y) in enumerate(centered_brake_points, start=1):
+        ax.text(brake_coor_x, brake_coor_y, str(i), color='black', fontsize=8,
+                ha='center', va='center', zorder=4, alpha=0.7)
+        ax.scatter(brake_coor_x, brake_coor_y, marker='o', c='white', s=160, 
+                   label='Frenata '+str(i)+": " + extract_text_from_speed_delta(speed_deltas_for_each_brake_zone[i-1]), edgecolors='black', linewidths=1.5, zorder=3, alpha=0.65)
 
     # ax.scatter(brake_pts['X'], brake_pts['Y'],
     #            marker='v', c='white', alpha=0.4, s=120, zorder=2)
@@ -153,7 +222,7 @@ if st.sidebar.button("Carica dati e mostra plot"):
 
     ax.axis('equal') # Imposta gli assi con la stessa scala per X e Y
     ax.axis('off') # Nasconde gli assi per un aspetto più pulito
-    ax.legend(loc='best', frameon=False, fontsize=12) # Aggiunge la legenda in alto a destra
+    ax.legend(loc='best', frameon=False, fontsize=7, markerscale=0.5,) # Aggiunge la legenda in alto a destra
 
 
     # Disegna la freccia
