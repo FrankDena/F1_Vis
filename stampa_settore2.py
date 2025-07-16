@@ -194,7 +194,8 @@ st.sidebar.title("F1 Telemetry Viewer")
 year = st.sidebar.selectbox("Year", [2022, 2023, 2024], index=2)
 wknd = st.sidebar.selectbox("Weekend", load_weekends_for_year(year), index=0)
 ses = st.sidebar.selectbox("Session", ['FP1', 'FP2', 'FP3', 'Q', 'R'], index=4)
-driver = st.sidebar.selectbox("Driver", load_drivers_for_session(year, wknd, ses))
+drivers_list = load_drivers_for_session(year, wknd, ses)
+driver = st.sidebar.selectbox("Driver", drivers_list)
 
 if st.sidebar.button("Load data and show plot"):
 # Definisci i parametri dell'analisi

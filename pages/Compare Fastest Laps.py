@@ -71,8 +71,8 @@ def plot_driver(ax, l):
 
     def extract_text_from_speed_delta(speed_delta_tuple):
         # Estrae il testo dalla tupla di velocità
-        return f"{speed_delta_tuple[0]} Km/h - {speed_delta_tuple[1]} Km/h ({speed_delta_tuple[2]} km/h)"
-     
+        return f"{speed_delta_tuple[0]} Km/h - {speed_delta_tuple[1]} Km/h (\u0394 = -{speed_delta_tuple[2]} km/h)"
+
     x, y = tel.loc[mask,'X'], tel.loc[mask,'Y'] # x e y contengono le coordinate X e Y della posizione nel settore specificato del tracciato ed ottenuto dalla maschera
     thr = tel.loc[mask,'Throttle'] # thr contiene i valori dell'acceleratore nel settore specificato
     # segmenti colorati
@@ -191,8 +191,9 @@ st.sidebar.title("F1 Telemetry Viewer")
 year = st.sidebar.selectbox("Year", [2022, 2023, 2024], index=2)
 wknd = st.sidebar.selectbox("Weekend", load_weekends_for_year(year), index=0)
 ses = st.sidebar.selectbox("Session", ['FP1', 'FP2', 'FP3', 'Q', 'R'], index=4)
-driver = st.sidebar.selectbox("Driver", load_drivers_for_session(year, wknd, ses))
-compared_driver = st.sidebar.selectbox("Compared Driver", load_drivers_for_session(year, wknd, ses))
+drivers_list = load_drivers_for_session(year, wknd, ses)
+driver = st.sidebar.selectbox("Driver", drivers_list)
+compared_driver = st.sidebar.selectbox("Compared Driver", drivers_list)
 
 if st.sidebar.button("Load data and show plot"):
     # Carica la sessione specificata
