@@ -71,7 +71,7 @@ def plot_driver(ax, l):
 
     def extract_text_from_speed_delta(speed_delta_tuple):
         # Estrae il testo dalla tupla di velocità
-        return f"{speed_delta_tuple[0]} Km/h - {speed_delta_tuple[1]} Km/h ({speed_delta_tuple[2]} km/h)"
+        return f"{speed_delta_tuple[0]} Km/h - {speed_delta_tuple[1]} Km/h (\u0394 = -{speed_delta_tuple[2]} km/h)"
      
     x, y = tel.loc[mask,'X'], tel.loc[mask,'Y'] # x e y contengono le coordinate X e Y della posizione nel settore specificato del tracciato ed ottenuto dalla maschera
     thr = tel.loc[mask,'Throttle'] # thr contiene i valori dell'acceleratore nel settore specificato
