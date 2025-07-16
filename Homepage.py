@@ -56,8 +56,8 @@ with col3:
         unsafe_allow_html=True
     )
 
-    st.write(
-        "Compare the fastest lap for each compound used by a driver in the specified session to highlight different approaches."
+    st.markdown(
+        "**Compare the fastest lap for each compound used by a driver in the specified session to highlight different approaches.**"
     )
     if st.button("🔎 Compare Compounds"):
         st.switch_page("pages/Compare Compounds.py")
