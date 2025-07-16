@@ -202,7 +202,7 @@ if st.sidebar.button("Load data and show plot"):
 
     # Aggiungi numeri dentro i marker
     for i, (brake_coor_x, brake_coor_y) in enumerate(centered_brake_points, start=1):
-        ax.text(brake_coor_x, brake_coor_y, str(i), color='black', fontsize=8,
+        ax.text(brake_coor_x, brake_coor_y, str(i), color='black', fontsize=8, fontweight='bold',
                 ha='center', va='center', zorder=4, alpha=0.7)
         ax.scatter(brake_coor_x, brake_coor_y, marker='o', c='white', s=160, 
                    label='Brake Zone '+str(i)+": " + extract_text_from_speed_delta(speed_deltas_for_each_brake_zone[i-1]), edgecolors='black', linewidths=1.5, zorder=3, alpha=0.65)

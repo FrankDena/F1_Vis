@@ -15,6 +15,7 @@ import math
 # Abilita la cache per velocizzare il caricamento dei dati
 ff1.Cache.enable_cache('cache')
 
+
 def load_weekends_for_year(year):
     # Restituisce la lista degli eventi per un anno specifico
     # da mostrare nella sidebar
@@ -30,12 +31,8 @@ def load_drivers_for_session(year, wknd, ses):
     drivers = [session.get_driver(driver)["Abbreviation"] for driver in driver_numbers]
     return drivers
 
-# Questa funzione disegna i grafici per ogni giro considerato prima
-# e li visualizza in Streamlit
-# La funzione cicla su ogni giro del dizionario fastest_per_compound
-def plot_on_axis(ax, obj):
-    lap = obj['fastest_lap'] # Estrai il giro più veloce dal dizionario
-    tel = lap.get_telemetry() # Estrai la telemetria del giro
+def plot_driver(ax, l):
+    tel = l.get_telemetry() # Estrai la telemetria del giro
     # Filtra la telemetria del settore tra d_start e d_end
     mask = (tel['Distance']>=d_start)&(tel['Distance']<=d_end) # Maschera boolean per filtrare la telemetria del settore
     
@@ -181,12 +178,12 @@ def plot_on_axis(ax, obj):
                           edgecolor='none', boxstyle='round,pad=0.2'))
 
     # Per il lap time, estraiamo il tempo del giro e lo formattiamo usando regex
-    lap_time = str(obj['fastest_lap']['LapTime'])[:-3]
+    lap_time = str(l['LapTime'])[:-3]
     match = re.search(r'(\d+:(\d+:\d+\.\d+))', lap_time)
     if match:
         lap_time = match.group(2)
     # Descrizione di ogni grafico
-    ax.set_title(f"{driver} - {weekend.EventName} - {session.event.year} - {ses} - Turn {sector.loc[0,'Number']}\n Compound: {obj['fastest_lap']['Compound']} - LAP: {obj['fastest_lap']['LapNumber'].astype(int)}\n LAP Time: {lap_time}\n Total Laps on this Compound: {obj['stint_length']} Laps",
+    ax.set_title(f"{l['Driver']} - {weekend.EventName} - {session.event.year} - {ses} - Turn {sector.loc[0,'Number']}\n Compound: {l['Compound']} - LAP: {l['LapNumber'].astype(int)}\n LAP Time: {lap_time}",
                  fontsize=8, fontweight='bold')
 
 # --- Sidebar per controlli ---
@@ -195,29 +192,27 @@ year = st.sidebar.selectbox("Year", [2022, 2023, 2024], index=2)
 wknd = st.sidebar.selectbox("Weekend", load_weekends_for_year(year), index=0)
 ses = st.sidebar.selectbox("Session", ['FP1', 'FP2', 'FP3', 'Q', 'R'], index=4)
 driver = st.sidebar.selectbox("Driver", load_drivers_for_session(year, wknd, ses))
+compared_driver = st.sidebar.selectbox("Compared Driver", load_drivers_for_session(year, wknd, ses))
 
 if st.sidebar.button("Load data and show plot"):
-# Definisci i parametri dell'analisi
-
+    # Carica la sessione specificata
     session = ff1.get_session(year, wknd, ses)
-    session.load()
+    session.load()  # Carica i dati della sessione
     weekend = session.event
 
-    # Seleziona, per lo specifico pilota, il giro più veloce effettuato per un determinato compound, dopo aver raggruppato i giri per compound
-    driver_laps = session.laps.pick_drivers(driver)
-    fastest_per_compound = {}
-    for comp, grp in driver_laps.groupby('Compound'): # Utilizza il metodo groupby per raggruppare i giri per compound
-        stint_per_compund = len(grp) # Estrai i giri per stint
-        fastest_lap = grp.pick_fastest() # Estrai il giro più veloce per ogni compound
-        if fastest_lap is None: # Se non esiste un giro veloce per il compound, salta
-            continue
-        fastest_per_compound[comp] = { 'fastest_lap': fastest_lap,
-                                    'stint_length': stint_per_compund } # Salva il giro più veloce in un dizionario, per lo specifico compound
+    # Ricaviamo la telemetria per i due piloti selezionati
+    lap_d1 = session.laps.pick_drivers(driver).pick_fastest()
+    tel_d1 = lap_d1.get_telemetry()
 
-    # Estrai le curve del circuito e definisci il settore
-    # (curve 1-4 in questo caso)
-    corners = session.get_circuit_info().corners
-    turns = [1,2,3,4]
+    lap_d2 = session.laps.pick_drivers(compared_driver).pick_fastest()
+    tel_d2 = lap_d2.get_telemetry()
+
+    laps = [lap_d1, lap_d2]
+
+    circuit_info = session.get_circuit_info()
+    corners = circuit_info.corners
+
+    turns = [1, 2, 3, 4]  # Definisci le curve del circuito da considerare
     sector = corners[corners['Number'].isin(turns)] # Costruisci il settore delle curve specificate
     dists = corners['Distance'].values
     i0, i1 = sector.index.min(), sector.index.max() # Estrai gli indici della prima e ultima curva del settore
@@ -232,25 +227,18 @@ if st.sidebar.button("Load data and show plot"):
         d_next = session.laps.get_telemetry()['Distance'].max() # d_next è la distanza massima della telemetria, cioè consideriamo l'ultima curva del circuito
     d_start, d_end = (d_prev+d0)/2, (d_end0+d_next)/2 # Calcola le distanze di inizio e fine del settore
 
-
-
     # Costruisci il grafico per ogni giro del dizionario fastest_per_compound, come un subplot
-    n = len(fastest_per_compound)
-    cols = n
+    cols = 2
     rows = 1
     fig, axes = plt.subplots(rows, cols,
                             figsize=(6*cols, 5*rows),
                             tight_layout=True)
 
-    if cols == 1:
-        axes = [axes]  # Assicurati che axes sia sempre una lista
-    else:
-        axes = axes.flatten()
-    for ax, obj in zip(axes, fastest_per_compound.values()):
-        plot_on_axis(ax, obj)
+    for ax, l in zip(axes, laps):
+        plot_driver(ax, l)
 
     # nascondi eventuali subplot vuoti
-    for ax in axes[n:]:
+    for ax in axes[2:]:
         ax.set_visible(False)
 
     # render in Streamlit
@@ -259,3 +247,6 @@ if st.sidebar.button("Load data and show plot"):
         layout="wide"
     )
     st.pyplot(fig, use_container_width=True)
+
+
+
