@@ -22,7 +22,7 @@ col1, col2, col3 = st.columns(3, gap="large")
 with col1:
    
     st.markdown(
-        f"## <img src='data:image/png;base64,{lap}' width='30'> Visualize Single Lap",
+        f"## <img src='data:image/png;base64,{lap}' width='80'> Visualize Single Lap",
         unsafe_allow_html=True
     )
     st.markdown(
@@ -38,7 +38,7 @@ with col2:
     
     
     st.markdown(
-        f"## <img src='data:image/png;base64,{fastest_lap}' width='30'> Compare Fastest Laps",
+        f"## <img src='data:image/png;base64,{fastest_lap}' width='50'> Compare Fastest Laps",
         unsafe_allow_html=True
     )
     st.markdown(
@@ -52,7 +52,7 @@ with col3:
     
     
     st.markdown(
-        f"## <img src='data:image/png;base64,{soft}' width='30'> Compare Compounds",
+        f"## <img src='data:image/png;base64,{soft}' width='50'> Compare Compounds",
         unsafe_allow_html=True
     )
 
