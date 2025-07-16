@@ -198,7 +198,7 @@ if st.sidebar.button("Load data and show plot"):
  
     def extract_text_from_speed_delta(speed_delta_tuple):
         # Estrae il testo dalla tupla di velocità
-        return f"{speed_delta_tuple[0]} Km/h - {speed_delta_tuple[1]} Km/h ({speed_delta_tuple[2]} km/h)"
+        return f"{speed_delta_tuple[0]} Km/h - {speed_delta_tuple[1]} Km/h (\u0394 = -{speed_delta_tuple[2]} km/h)"
 
     # Aggiungi numeri dentro i marker
     for i, (brake_coor_x, brake_coor_y) in enumerate(centered_brake_points, start=1):
