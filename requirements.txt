@@ -1,0 +1,6 @@
+streamlit
+pandas
+fastf1
+numpy
+matplotlib
+scipy
