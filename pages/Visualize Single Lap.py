@@ -165,7 +165,7 @@ if st.sidebar.button("Load data and show plot"):
     fig, ax = plt.subplots(figsize=(6, 6))
     lap_time_formatted = format_lap_time(lap['LapTime'])
     fig.suptitle(
-        f"{driver} - {session.event.EventName} {session.event.year} {session_name} "
+        f"{driver} - {session.event.EventName} - {session.event.year} - {session_name} "
         f"Sector {sector_curves.iloc[0]['Number']}\n"
         f"Compound: {lap['Compound']} - Lap: {int(lap['LapNumber'])} - Time: {lap_time_formatted}",
         fontsize=12, fontweight='bold'
